@@ -132,8 +132,9 @@ public class TransactionApiIntegrationTest {
 
         // Total = 225. We'll pay 130, enough for T1 and T2 (partial T3 is ignored)
 
-        mockMvc.perform(post("/api/transactions/payment")
-                        .param("paymentValue", "130"))
+        mockMvc.perform(post("/api/transactions/pay")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"paymentValue\":130}"))
                 .andExpect(status().isOk());
 
         // Fetch all transactions and verify statuses

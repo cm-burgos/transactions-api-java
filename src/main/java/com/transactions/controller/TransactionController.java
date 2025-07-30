@@ -23,7 +23,6 @@ public class TransactionController {
         this.service = service;
     }
 
-
     @GetMapping
     public ResponseEntity<Page<Transaction>> list(
             @RequestParam(required = false) String name,
@@ -77,9 +76,11 @@ public class TransactionController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/payment")
-    public ResponseEntity<Void> pay(@RequestParam Double paymentValue) {
-        service.makePayment(paymentValue);
+    public record PaymentValueBody(Double paymentValue) {}
+
+    @PostMapping("/pay")
+    public ResponseEntity<Void> pay(@RequestBody PaymentValueBody paymentValue) {
+        service.makePayment(paymentValue.paymentValue);
         return ResponseEntity.ok().build();
     }
 }
