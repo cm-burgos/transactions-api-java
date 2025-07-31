@@ -6,6 +6,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.web.SortDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,28 +31,10 @@ public class TransactionController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @RequestParam(required = false) String status,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "date,desc") String[] sort
+            @PageableDefault(size = 10) @SortDefault.SortDefaults({
+                    @SortDefault(sort = "date", direction = Sort.Direction.DESC)
+            }) Pageable pageable
     ) {
-        List<Sort.Order> orders = new ArrayList<>();
-        for (String sortParam : sort) {
-            String[] _sort = sortParam.split(",");
-            if (_sort.length == 0) continue;
-
-            String property = _sort[0];
-            Sort.Direction direction = (_sort.length > 1 && _sort[1].equalsIgnoreCase("desc"))
-                    ? Sort.Direction.DESC
-                    : Sort.Direction.ASC;
-
-            // Only allow valid property names
-            if (!List.of("date", "name", "value", "status").contains(property)) {
-                continue; // skip invalid property
-            }
-
-            orders.add(new Sort.Order(direction, property));
-        }
-        Pageable pageable = PageRequest.of(page, size, Sort.by(orders));
         Page<Transaction> list = service.searchWithFilters(name, from, to, status, pageable);
         return ResponseEntity.ok(list);
     }
