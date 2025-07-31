@@ -31,7 +31,7 @@ public class TransactionController {
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "date,asc") String[] sort
+            @RequestParam(defaultValue = "date,desc") String[] sort
     ) {
         List<Sort.Order> orders = new ArrayList<>();
         for (String sortParam : sort) {
