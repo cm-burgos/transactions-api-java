@@ -1,6 +1,8 @@
 package com.transactions.service;
 
+import com.transactions.model.Payment;
 import com.transactions.model.Transaction;
+import com.transactions.repository.PaymentRepository;
 import com.transactions.repository.TransactionRepository;
 import com.transactions.spec.TransactionSpecification;
 import org.springframework.data.jpa.domain.Specification;
@@ -17,9 +19,11 @@ import java.util.List;
 public class TransactionService {
 
     private final TransactionRepository repo;
+    private final PaymentRepository paymentRepo;
 
-    public TransactionService(TransactionRepository repo) {
+    public TransactionService(TransactionRepository repo, PaymentRepository paymentRepo) {
         this.repo = repo;
+        this.paymentRepo = paymentRepo;
     }
 
     public List<Transaction> getAll() {
@@ -50,6 +54,38 @@ public class TransactionService {
         if (date != null) {
             t.setDate(date.withZoneSameInstant(ZoneOffset.UTC));
         }
+
+        List<Payment> payments = paymentRepo.findAll().stream().filter(payment -> payment.getStatus() == Payment.PaymentStatus.PENDING).toList();
+
+        Double transactionValue = t.getValue();
+
+        for (Payment p : payments) {
+            double paymentValue = p.getValue();
+
+            if (transactionValue <= 0) {
+                break; // We've paid off the transaction
+            }
+
+            if (paymentValue <= transactionValue) {
+                // Use the entire payment
+                transactionValue -= paymentValue;
+                p.setStatus(Payment.PaymentStatus.COMPLETED);
+            } else {
+                // Payment is larger than what's left to pay — partially use it
+                double remainingPayment = paymentValue - transactionValue;
+                p.setValue(remainingPayment);
+                // Optionally update status or leave as partially paid
+                t.setStatus(Transaction.TransactionStatus.PAID);
+            }
+
+            paymentRepo.save(p); // Persist changes
+        }
+
+        t.setValue(transactionValue);
+        if (transactionValue == 0) {
+            t.setStatus(Transaction.TransactionStatus.PAID);
+        }
+
         return repo.save(t);
     }
 
@@ -60,12 +96,27 @@ public class TransactionService {
                 .sorted((a,b) -> a.getDate().compareTo(b.getDate()))
                 .toList();
 
+        if (pending.isEmpty()) {
+            Payment newPayment = new Payment();
+            newPayment.setValue(paymentValue);
+
+            newPayment.setStatus(paymentValue == 0 ? Payment.PaymentStatus.COMPLETED : Payment.PaymentStatus.PENDING );
+            paymentRepo.save(newPayment);
+        }
+
         for (Transaction t : pending) {
             if (paymentValue >= t.getValue()) {
                 paymentValue -= t.getValue();
                 t.setStatus(Transaction.TransactionStatus.PAID);
+
                 repo.save(t);
             } else {
+                Payment newPayment = new Payment();
+                newPayment.setValue(paymentValue);
+
+
+                newPayment.setStatus(paymentValue == 0 ? Payment.PaymentStatus.COMPLETED : Payment.PaymentStatus.PENDING );
+                paymentRepo.save(newPayment);
                 break;
             }
         }

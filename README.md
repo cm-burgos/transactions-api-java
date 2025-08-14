@@ -25,8 +25,6 @@ mvn spring-boot:run
 ```bash
 mvn test
 ```
-
-
 ## 🧠 Overview
 
 This API handles basic financial transactions and supports:
